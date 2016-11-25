@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <pthread.h>
+#include "list.h"
 
 #define CLADDR_LEN 100
 #define ipa 16
@@ -16,7 +17,8 @@
 #define BUFLEN 200
 #define buff 200
 #define PORT 4444
-int i,index1=0;
+
+int i,index1=0,a;
 char *id[100];
 char *ip[100],*buf1[ipa+1]; 
 
@@ -35,12 +37,13 @@ void * receiveMessage(void * socket)
        printf("Error receiving data!\n");    
       } 
       else
-      {
-       //printf("server: ");
-     fputs(buffer, stdout);
-      //printf("\n");
-      }  
-  }
+         fputs(buffer, stdout);
+              if((strncmp(buffer,"exit",4))==0)
+                           {
+                            printf("Client Exit...\n");
+                            list1();
+                            } 
+   }
 }
 
 void *sender1(void *ptr)
@@ -83,12 +86,19 @@ void *sender1(void *ptr)
 
      while (fgets(buffer, BUF_SIZE, stdin) != NULL) 
      {
+                      
        ret = sendto(sockfd, buffer, BUF_SIZE, 0, (struct sockaddr *) &addr, sizeof(addr));  
          if (ret < 0) 
           {  
             printf("Error sending data!\n\t-%s", buffer);  
           }
-}
+         if((strncmp(buffer,"exit",4))==0)
+                           {
+                               list1();
+                                //break;
+                            }
+             
+     }
 
  close(sockfd);
  pthread_exit(NULL);
@@ -113,14 +123,14 @@ void *sender1(void *ptr)
         }
           printf("Socket created...\n");
           memset(&addr, 0, sizeof(addr));
-           addr.sin_family = AF_INET;
+          addr.sin_family = AF_INET;
           addr.sin_addr.s_addr = INADDR_ANY;
           addr.sin_port = PORT;
-         ret = bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)); 
+          ret = bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)); 
            if (ret < 0) 
              {
-             printf("Error binding!\n");
-             exit(1);
+              printf("Error binding!\n");
+              exit(1);
              }
             printf("Binding done...\n");
 
@@ -148,8 +158,9 @@ void *sender1(void *ptr)
              exit(1);
              }
 
-               while (fgets(buffer, BUF_SIZE, stdin) != NULL) 
+                while (fgets(buffer, BUF_SIZE, stdin) != NULL) 
                  {
+                       
                    ret = sendto(newsockfd, buffer, BUF_SIZE, 0, (struct sockaddr *) &cl_addr, len);  
                       if (ret < 0) 
                    {  
@@ -165,46 +176,52 @@ void *sender1(void *ptr)
      
 } 
  
-int list()
+char list()
 {
- int i,n;
-for(i=0;i<=3;i++)
-{
-if(id[i]==NULL)
-break;
-printf("%d.%s\n",i,id[i]);
-printf("  %s\n",ip[i]);
+ int index;
+ char *k,*j;
+
+ for(index=1;index<=a;index++)
+    {
+      k=getUserIP(index);
+      j=getUserID(index);
+      printf("\n\n%d.%s\n",index,j);
+      printf("  %s\n",k);
+      ip[index]=k;
+    }
 }
-}
-int main()
+
+      int list1()
 	{
          pthread_t udp1,thread_reader1,thread_writer1;
          int iret1,iret2,iret3,iret4;
  	 char *message3="thread_reader1";
  	 char *message4="thread_writer2";
-         int a=0,l;
-         printf("enter the 1 to list");
+         int l,index1;
+
+           printf("enter the 1 to display list");
            scanf("%d",&l);
-           switch (l)
-           {
-           case 1:list();
-                   break;
-           default :
-           printf("Invalid option\n" );
-            }
-         
+           if(l==1) 
+              printf("the number of users are=");
+              a=getUserListCount();
+              printf("%d\n\n",a);
+              list();
+             
+             
           printf("enter 1 to send or 0 to receive");
           scanf("%d",&a);
-          while(a==0)
+         
+          if(a==0)
            {
            iret3=pthread_create(&thread_reader1,NULL,receiver1,(void *)message4);
            pthread_join(thread_reader1,NULL);
            }
-           
+
          printf("enter the uerid no ");
          scanf("%d",&index1);
          buf1[ipa]=ip[index1];
+         printf("%s",buf1[ipa]);
+         
          iret4=pthread_create(&thread_writer1,NULL,sender1,(void *)message3);
  	 pthread_join(thread_writer1,NULL);
-        }
-
+       }

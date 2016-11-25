@@ -15,9 +15,6 @@
 #define buff 200
 #define PORT 4444
 
-int i,index=0;
-char *id[100];
-char *ip[100],*buf1[ipa+1];
 
  struct ip_list
   {
@@ -30,6 +27,7 @@ char *ip[100],*buf1[ipa+1];
   struct ip_list *node;
   struct ip_list *newnode;
 
+ char username[50];
 
  void* sender(void *ptr)
   {
@@ -61,17 +59,17 @@ char *ip[100],*buf1[ipa+1];
      }
 
                 
-      for(i=0;i<=3;i++) 
+      while(1)
        {
         
-         sprintf(buffer, "umesh");
+         sprintf(buffer,username);
          ret = sendto(sockfd, buffer, buflen, 0, (struct sockaddr *)&sock_in, sinlen);  
          if (ret < 0) 
           {  
             printf("Error sending data!\n\t-%s\n", buffer);  
           }
          sleep(1);
-          }
+       }
     // close(sockfd);
    }
  
@@ -99,7 +97,7 @@ char *ip[100],*buf1[ipa+1];
       printf("error in creating bind");
      }
       
-      for(i=0;i<=3;i++)
+      while(1)
        {
         fflush(stdout);
        
@@ -115,9 +113,8 @@ char *ip[100],*buf1[ipa+1];
              strcpy(head->ip,inet_ntoa(si_other.sin_addr));
              head->next=NULL;
              node=head;
-             userlist();
              continue;
-             } 
+            } 
            else
              {
               newnode=(struct ip_list *)malloc(sizeof(struct ip_list));
@@ -126,18 +123,69 @@ char *ip[100],*buf1[ipa+1];
               k=findipinlist(newnode->ip);
               newnode->next=NULL;
              } 
+           
            if(k==-1)
             {
-          node->next=newnode;
-          node=newnode;
-          userlist();
+             node->next=newnode;
+             node=newnode;
             }       
        } 
     close(s);
     return 0;
    }
  
-  int findipinlist(char *ip)
+int getUserListCount()
+ {
+    int i =0;
+    node=head;
+    while(node!=NULL)
+    { 
+       i++;
+       node=node->next;
+      
+    }
+   return i; 
+  
+ }
+
+char *getUserIP(int index)
+  {
+   int i=1;
+   node=head;
+   while(node!=NULL)
+    { 
+	
+ 	if(i!=index)
+          {
+ 	    node=node->next;
+            i++;
+          }
+         else
+          return node->ip;
+          
+     }
+   return -1;
+  }
+
+ char *getUserID(int index)
+  { 
+   int i=1;
+   node=head;
+   while(node!=NULL)
+     {
+      if(i!=index)
+        {
+         node=node->next;
+         i++;
+        }
+       else
+         return node->usr;
+         
+       }
+     return -1;
+    }     
+
+ int findipinlist(char *ip)
    {
     node=head;
     while(node!=NULL)
@@ -146,7 +194,7 @@ char *ip[100],*buf1[ipa+1];
      if (strcmp(node->ip,newnode->ip))
      {
 	if(node->next)
-	 node=node->next;
+	node=node->next;
 	else
          return -1;
      }
@@ -156,34 +204,22 @@ char *ip[100],*buf1[ipa+1];
    return -1; 
   }
 
-int userlist()
-{   
-    
-    id[index]=node->usr;
-    ip[index]=node->ip;
-    index++;
-    //list();
-}
-int list1()
-	{
-         pthread_t thread_reader,thread_writer,thread_reader1,thread_writer1;
-         int iret1,iret2;
- 	 char *message1="thread_reader";
- 	 char *message2="thread_writer";
-         int a,l;
-         iret1=pthread_create(&thread_writer,NULL,receiver,(void *)message2);
-         iret2=pthread_create(&thread_reader,NULL,sender,(void *)message1);
- 	 pthread_join(thread_writer,NULL);
- 	 pthread_join(thread_reader,NULL); 
-         }
+  
+   int main(int argc,char *argv[])
+     {
+      if(argc<2)
+       {
+        printf(" enter username\n");
+        exit(0);
+       }
+      
+      strcpy(username,argv[1]);
+      pthread_t thread_reader,thread_writer,thread_reader1,thread_writer1;
+      int iret1,iret2;
+      char *message1="thread_reader";
+      char *message2="thread_writer";
+      iret1=pthread_create(&thread_writer,NULL,receiver,(void *)message2);
+      iret2=pthread_create(&thread_reader,NULL,sender,(void *)message1);
+      list1();
+     }
 
-int list()
-{
-for(i=0;i<=3;i++) 
-{
- if (id[i]==NULL)
-  break;
- printf("%d.%s\n",i,id[i]);
- printf("  %s\n",ip[i]);
-}
-}
