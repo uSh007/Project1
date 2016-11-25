@@ -16,7 +16,7 @@
 #define MAXBUF 200
 #define BUFLEN 200
 #define buff 200
-#define PORT 4444
+#define PORT 44444
 
 int i,index1=0,a;
 char *id[100];
@@ -38,11 +38,7 @@ void * receiveMessage(void * socket)
       } 
       else
          fputs(buffer, stdout);
-              if((strncmp(buffer,"exit",4))==0)
-                           {
-                            printf("Client Exit...\n");
-                            list1();
-                            } 
+             
    }
 }
 
@@ -92,11 +88,7 @@ void *sender1(void *ptr)
           {  
             printf("Error sending data!\n\t-%s", buffer);  
           }
-         if((strncmp(buffer,"exit",4))==0)
-                           {
-                               list1();
-                                //break;
-                            }
+        
              
      }
 
@@ -113,6 +105,7 @@ void *sender1(void *ptr)
  char buffer[BUF_SIZE];
  pid_t childpid;
  char clientAddr[CLADDR_LEN];
+ int yes=1;
  pthread_t rThread;
  
       sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -126,7 +119,14 @@ void *sender1(void *ptr)
           addr.sin_family = AF_INET;
           addr.sin_addr.s_addr = INADDR_ANY;
           addr.sin_port = PORT;
-          ret = bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)); 
+          ret = bind(sockfd, (struct sockaddr *) &addr, sizeof(addr));
+
+
+       if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) 
+	{
+   	 perror("setsockopt");
+    	 exit(1);
+	} 
            if (ret < 0) 
              {
               printf("Error binding!\n");
@@ -177,11 +177,11 @@ void *sender1(void *ptr)
 } 
  
 char list()
-{
- int index;
- char *k,*j;
+ {
+  int index;
+  char *k,*j;
 
- for(index=1;index<=a;index++)
+  for(index=1;index<=a;index++)
     {
       k=getUserIP(index);
       j=getUserID(index);
@@ -189,7 +189,7 @@ char list()
       printf("  %s\n",k);
       ip[index]=k;
     }
-}
+ }
 
       int list1()
 	{
