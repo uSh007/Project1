@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <pthread.h>
+#include "status.h"
 
 #define CLADDR_LEN 100
 #define ipa 16
@@ -20,21 +21,27 @@
   {
    char usr[user];
    char ip[ipa]; 
+   int busy;
    struct ip_list *next;
   };
 
   struct ip_list *head=NULL;
   struct ip_list *node;
   struct ip_list *newnode;
-
- char username[50];
+ 
+struct info
+ {
+  char username[50];
+  int busy;
+ };
+ struct info myinfo;
 
  void* sender(void *ptr)
   {
    int sockfd, status, buflen, sinlen,ret;
-   char buffer[MAXBUF+1];
    struct sockaddr_in sock_in;
-   int yes = 1,interval=10,seconds_to_sleep,duration,elapsed;
+   int yes = 1,interval=10,seconds_to_sleep,duration,elapsed,i;
+   
   
    sinlen = sizeof(struct sockaddr_in);
    memset(&sock_in, 0, sinlen);
@@ -49,24 +56,21 @@
    status = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(int) );
         
 
-   memset(buffer, 0, BUF_SIZE);
- 
-
-    if(ret) 
+   if(ret) 
      {
       printf("ERROR: Return Code from pthread_create() is %d\n", ret);
       exit(1);
      }
 
                 
-      while(1)
+    while(1)
        {
+        myinfo.busy=getbusystatus();
         
-         sprintf(buffer,username);
-         ret = sendto(sockfd, buffer, buflen, 0, (struct sockaddr *)&sock_in, sinlen);  
+         ret = sendto(sockfd, &myinfo, sizeof(struct info), 0, (struct sockaddr *)&sock_in, sinlen);  
          if (ret < 0) 
           {  
-            printf("Error sending data!\n\t-%s\n", buffer);  
+            printf("Error sending data!\n\t-%s\n",&myinfo);  
           }
          sleep(1);
        }
@@ -78,13 +82,13 @@
     {
      struct sockaddr_in si_me, si_other;
      int s, i, slen = sizeof(si_other) , recv_len,ret,k;
-     char buf[BUFLEN+1];
-    
+     struct info userinfo;
+     
      if((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
        {
         printf("error in socket");
        }
-     
+   
     memset((char *) &si_me, 0, sizeof(si_me));
      
     si_me.sin_family = AF_INET;
@@ -96,21 +100,24 @@
      {
       printf("error in creating bind");
      }
+
+  
       
-      while(1)
+   while(1)
        {
         fflush(stdout);
        
-         if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1)
-          {
-            printf("error in recvfrom()");
-          }
+        if ((recv_len = recvfrom(s, &userinfo,sizeof(struct info), 0, (struct sockaddr *) &si_other, &slen)) == -1)
+         {
+          printf("error in recvfrom()");
+         }
          
           if(head==NULL)
             {
              head=(struct ip_list *)malloc(sizeof(struct ip_list));
-             strcpy(head->usr,buf);
+             strcpy(head->usr,userinfo.username);
              strcpy(head->ip,inet_ntoa(si_other.sin_addr));
+             head->busy=userinfo.busy;
              head->next=NULL;
              node=head;
              continue;
@@ -118,8 +125,9 @@
            else
              {
               newnode=(struct ip_list *)malloc(sizeof(struct ip_list));
-              strcpy(newnode->usr,buf);
+              strcpy(newnode->usr,userinfo.username);
               strcpy(newnode->ip,inet_ntoa(si_other.sin_addr));
+              newnode->busy=userinfo.busy;
               k=findipinlist(newnode->ip);
               newnode->next=NULL;
              } 
@@ -148,7 +156,7 @@ int getUserListCount()
   
  }
 
-char *getUserIP(int index)
+ char *getUserIP(int index)
   {
    int i=1;
    node=head;
@@ -194,7 +202,7 @@ char *getUserIP(int index)
      if (strcmp(node->ip,newnode->ip))
      {
 	if(node->next)
-	node=node->next;
+	 node=node->next;
 	else
          return -1;
      }
@@ -203,7 +211,23 @@ char *getUserIP(int index)
    }
    return -1; 
   }
-
+ 
+ char *getuserstatus(int index)
+  {
+    int i=1;
+   node=head;
+   while(node!=NULL)
+     {
+      if(i!=index)
+        {
+         node=node->next;
+         i++;
+        }
+       else
+         return node->busy;
+      }
+     return -1;
+   }
   
    int main(int argc,char *argv[])
      {
@@ -213,13 +237,14 @@ char *getUserIP(int index)
         exit(0);
        }
       
-      strcpy(username,argv[1]);
+      strcpy(myinfo.username,argv[1]);
+      myinfo.busy=0;                          
       pthread_t thread_reader,thread_writer,thread_reader1,thread_writer1;
       int iret1,iret2;
       char *message1="thread_reader";
       char *message2="thread_writer";
-      iret1=pthread_create(&thread_writer,NULL,receiver,(void *)message2);
-      iret2=pthread_create(&thread_reader,NULL,sender,(void *)message1);
+      iret1=pthread_create(&thread_reader,NULL,receiver,(void *)message2);
+      iret2=pthread_create(&thread_writer,NULL,sender,(void *)message1);
       list1();
      }
 

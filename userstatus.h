@@ -1,0 +1,1 @@
+char *getuserstatus(int index);
